@@ -1,0 +1,1 @@
+## simple immutable structure helper in react/redux application
