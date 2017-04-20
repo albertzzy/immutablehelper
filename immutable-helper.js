@@ -4,9 +4,14 @@
 	['a','b:1']
 
 	set - 单个值（plainobject key-val[merge],array val）
-	add - array push
-	delet - array key delete,plainobject key delete
+	add - array push (deprecated)
+	delet - array key delete,plainobject key delete (deprecated)
+
+	deprecated add and delete,which are all mutable operation and could be avoided;
 */
+
+var pa,key,index,newObj;
+var flag = false;
 
 function isObject(obj){
 	return typeof obj === 'object'
@@ -23,6 +28,55 @@ function isArray(arr){
 	return typeof Array.isArray === 'function'? Array.isArray(arr):arr instanceof Array;
 }
 
+function isEqual(a,b){
+	if(typeof a === 'object'){
+		var akeys = Object.keys(a);
+		var bkeys = Object.keys(b);
+
+		if(akeys.length !== bkeys.length){
+			return false;
+		}
+
+		for(var i=0;i<akeys.length;i++){
+			if(typeof b[akeys[i]] === 'undefined'){
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	return a === b;
+}
+
+function deepCopy(obj){
+	
+}
+
+
+function hardCopy(obj,path,value){
+	if(!flag){
+		newObj = deepCopy(obj);
+		flag = true;
+	}
+
+	if(path.length){
+		pa = path.pop();
+		if(~pa.indexOf(':')){
+			key = pa.split(':')[0];
+			index = pa.split(':')[1];
+			hardCopy(newObj[key][index],path,value)
+
+		}else{
+			hardCopy(newObj[pa],path,value)
+
+		}
+	}else{
+		obj = value;
+	}
+
+	return newObj;
+}
 
 
 
@@ -54,7 +108,7 @@ function lookup(obj,path){
 }
 
 
-function update(obj,path,value,command,config){
+function update(obj,path,value,config){
 	if(!isPlainObject(obj)){
 		throw new Error('obj should be a plain obj.');
 	}
@@ -65,16 +119,7 @@ function update(obj,path,value,command,config){
 	
 	config = config || {merge:false};
 
-	doCommand(obj,value,path,command,config);
-}
-
-
-function doCommand(obj,value,path,command,config){
-	switch(command){
-		case '$set': setfunc(obj,value,path,config);break;
-		case '$add':addFunc(obj,value,path,config);break;
-		case '$delete':deleteFunc(obj,value,path,config);break;
-	}
+	setfunc(obj,value,path,config);
 }
 
 
@@ -92,20 +137,15 @@ function setfunc(obj,value,path,config){
 	}
 }
 
-function addFunc(obj,value,path,config){
-	var lp = lookup(obj,path);
-
-	if(!isArray(lp)){
-		throw new Error('the value pathed should be an array');
-	}
-
-	immutableAdd(obj,value,path);
-	
+function immutableMerge(obj,lp,path,value){
+	return Object.assign({},lp,value);
 }
 
-function deleteFunc(obj,value,path,config){
-	var lp = lookup(obj,path);
 
-	
-
+function immutableSet(obj,lp,path,value){
+	if(isEqual(value,lp)){
+		return obj;
+	}else{
+		return hardCopy(obj,path,value);
+	}
 }
